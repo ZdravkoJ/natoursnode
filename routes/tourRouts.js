@@ -14,7 +14,6 @@ const router = express.Router();
 router
   .route('/')
   .get(tourControler.getAllTours)
-  // .post(tourControler.checkBody, tourControler.createTour);
   .post(tourControler.createTour);
 
 router
