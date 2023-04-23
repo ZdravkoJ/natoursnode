@@ -1,11 +1,43 @@
 // const fs = require('fs');
-
 const Tour = require('./../models/tourModel');
 
 exports.getAllTours = async (req, res) => {
   try {
-    const tours = await Tour.find();
+    //// BUILD QUERY
+    const queryObject = { ...req.query };
 
+    const excludedFields = ['paga', 'sort', 'limit', 'fields'];
+    excludedFields.forEach(el => delete queryObject[el]);
+
+    // console.log(req.query, queryObject);
+    let queryStr = JSON.stringify(queryObject);
+    queryStr = queryStr.replace(/\b(gte?|lte?)\b/g, match => `$${match}`);
+
+    let query = Tour.find(JSON.parse(queryStr));
+
+    ///SORTING
+    if (req.query.sort) {
+      const sortBy = req.query.sort.split(',').join(' ');
+      query = query.sort(sortBy);
+    } else {
+      query = query.sort('-createdAt');
+    }
+
+    ///FIELD LIMITING
+    if (req.query.fields) {
+      const fields = req.query.fields.split(',').join(' ');
+      query = query.select(fields);
+    } else {
+      query = query.select('__v');
+    }
+    // const query = await Tour.find()
+    //   .where('duration')
+    //   .equals(5)
+    //   .where('difficulty')
+    //   .equals('easy');
+    /// EXECUTE QUERY
+    const tours = await query;
+    /// SEND RESPONS
     res.status(200).json({
       status: 'success',
       results: tours.length,
