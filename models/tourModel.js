@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { stringify } = require('querystring');
 ////mongoose schema
 const tourSchema = new mongoose.Schema({
   name: {

@@ -11,7 +11,7 @@ exports.getAllTours = async (req, res) => {
 
     // console.log(req.query, queryObject);
     let queryStr = JSON.stringify(queryObject);
-    queryStr = queryStr.replace(/\b(gte?|lte?)\b/g, match => `$${match}`);
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
 
     let query = Tour.find(JSON.parse(queryStr));
 
@@ -20,7 +20,7 @@ exports.getAllTours = async (req, res) => {
       const sortBy = req.query.sort.split(',').join(' ');
       query = query.sort(sortBy);
     } else {
-      query = query.sort('-createdAt');
+      query = query.sort('-_id');
     }
 
     ///FIELD LIMITING
@@ -28,16 +28,25 @@ exports.getAllTours = async (req, res) => {
       const fields = req.query.fields.split(',').join(' ');
       query = query.select(fields);
     } else {
-      query = query.select('__v');
+      query = query.select('-__v');
     }
-    // const query = await Tour.find()
-    //   .where('duration')
-    //   .equals(5)
-    //   .where('difficulty')
-    //   .equals('easy');
+
+    /// Pagination
+    const page = req.query.page * 1 || 1;
+    const limit = req.query.limit * 1 || 100;
+    const skip = (page - 1) * limit;
+
+    query = query.skip(skip).limit(limit);
+    // page=2&limit=10, 1-10, page 1, 11-20 page2
+
     /// EXECUTE QUERY
+    if (req.query.page) {
+      const numTours = await Tour.countDocuments();
+      if (skip >= numTours) throw new Error('This page does not exist');
+    }
     const tours = await query;
     /// SEND RESPONS
+
     res.status(200).json({
       status: 'success',
       results: tours.length,
@@ -46,7 +55,7 @@ exports.getAllTours = async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(400).json({
+    res.status(404).json({
       status: 'fail',
       message: err.message
     });
